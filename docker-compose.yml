@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: foodlence_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: foodlence_user
+      POSTGRES_PASSWORD: foodlence_password
+      POSTGRES_DB: foodlence_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodlence_user -d foodlence_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: foodlence_api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://foodlence_user:foodlence_password@db:5432/foodlence_db
+      - ENVIRONMENT=development
+      - DEBUG=True
+    volumes:
+      - ./app:/app/app
+      - ./ml:/app/ml
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
