@@ -340,3 +340,58 @@ psql "$DATABASE_URL" -f app/db/03_validation_and_smoke_test.sql
 
 ### Q4: How is the Medical Liability Disclaimer tracked in the database?
 > *"In compliance with Proposal Sections 10.4 and 14.4, `app.users` enforces a non-nullable timestamp `disclaimer_accepted_at timestamptz NOT NULL DEFAULT now()`. A user cannot complete registration without storing a verified cryptographic acknowledgment of the medical disclaimer."*
+
+## 8. Source and Citation Appendix
+
+The seed data is a manually curated dataset. It was not downloaded as one
+single file from one provider. Each mapping records the applicable authority
+(`FDA`, `EFSA`, or `CODEX`) in `kb.ingredient_allergens.source`; the source
+authority is evidence of the regulatory basis used during curation, not a
+claim that every row was copied verbatim from that authority.
+
+| Dataset area | Primary reference | Use in FoodLence |
+|---|---|---|
+| Major food allergens | [FDA Food Allergies](https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/food-allergies) | Defines the US major-allergen labeling context. |
+| Allergen labeling guidance | [FDA Food Allergens/Gluten-Free Guidance](https://www.fda.gov/food/guidance-documents-regulatory-information-topic-food-and-dietary-supplements/food-allergensgluten-free-guidance-documents-regulatory-information) | Supports allergen declaration and ingredient interpretation. |
+| Sesame as a major allergen | [FASTER Act information](https://www.foodsafety.gov/blog/food-allergy-safety-treatment-education-and-research-act-2021) | Supports the ninth US major allergen, sesame. |
+| EU additive safety information | [EFSA Food Additives](https://www.efsa.europa.eu/en/topics/topic/food-additives) | Supports additive identity, E-number usage, and safety context. |
+| EU additive authorization | [European Commission Food Additives Database](https://food.ec.europa.eu/food-safety/food-improvement-agents/additives/database_en) | Cross-checks authorized E-numbers, functions, and conditions of use. |
+| International additive standard | [Codex GSFA Online](https://www.fao.org/fao-who-codexalimentarius/codex-texts/dbs/gsfa/en/) | Cross-checks international additive names and functional classes. |
+| EU allergen terminology | [Regulation (EU) No 1169/2011](https://eur-lex.europa.eu/eli/reg/2011/1169/oj) | Supports EU food-information and allergen declaration terminology. |
+
+**Access date:** 2026-10-28.
+
+### 8.1. Seed Quality Audit
+
+The repository seed files were checked on 2026-10-28 using deterministic
+parsing of the SQL value rows:
+
+| Check | Result |
+|---|---:|
+| Standard ingredient rows | 186 |
+| Additive rows with E-numbers | 136 |
+| Total unique seeded entities | 322 |
+| Curated alias rows | 96 |
+| Allergen-source ingredients | 150 |
+| Allergen-source ingredients without mappings | 0 |
+| Mapping rows with orphan ingredient slugs | 0 |
+| Duplicate ingredient slugs | 0 |
+| Duplicate additive slugs | 0 |
+| Duplicate E-numbers | 0 |
+| Empty ingredient/additive explanations | 0 |
+| Empty mapping notes | 0 |
+
+The audit confirms that the current files meet the documented minimum of
+100 additives and 300 combined knowledge-base entities. It does not replace
+the PostgreSQL validation script: run
+`app/db/03_validation_and_smoke_test.sql` after loading the seeds to verify
+database constraints, triggers, stored functions, and scan evaluation.
+
+### 8.2. Curation Limitations
+
+The current schema stores a source authority and a short note for each
+allergen mapping, but it does not yet store a source URL, regulation section,
+or per-row access date. For a future dataset revision, add a dedicated
+curation-reference table or equivalent metadata so each mapping can be traced
+to an exact citation. Until then, the table above is the authoritative
+reference list for the current academic seed release.
