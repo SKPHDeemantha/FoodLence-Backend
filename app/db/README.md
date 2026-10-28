@@ -9,7 +9,7 @@
 ## 1. Directory Structure
 
 ```text
-database/
+app/db/
 ├── 01_schema_final.sql            # Master DDL script (schemas, types, tables, triggers, functions, views)
 ├── 02_seed_reference.sql         # Base seed (9 major FDA allergens + sulfites, additive categories, roles)
 ├── 03_validation_and_smoke_test.sql # Non-destructive verification suite & curation data quality checks
@@ -24,7 +24,16 @@ database/
 │       ├── 0004_scans_and_matching.py   # Scans, ingredient fragments, matches, evaluation functions, v_inference_logs
 │       └── 0005_seed_reference.py # Pre-seeded reference taxonomies
 └── README.md                      # This documentation
+
+knowledge_base_seed/               # Modular Seed Dataset (Proposal Deliverable: 300+ entities, 100+ additives)
+├── seed_allergens.sql             # 9 major allergen groups + sulfite group + additive categories
+├── seed_additives.sql             # 105 food additives with E-numbers, categories, and explanations
+├── seed_ingredients.sql           # 220+ primary ingredients + curated synonyms and local aliases
+├── seed_mappings.sql              # Relational mappings linking ingredients/additives to allergen groups
+└── seed_embeddings.py             # Vector embedding extraction utility
 ```
+
+> **Full Documentation**: See [KNOWLEDGE_BASE_GUIDE.md](../../KNOWLEDGE_BASE_GUIDE.md) for the complete scientific curation manual, regulatory taxonomies, and academic defense notes.
 
 ---
 
@@ -73,29 +82,33 @@ export DATABASE_URL="postgresql://user:password@ep-sample-pooler.neon.tech/foodl
 From the project root:
 ```bash
 # Apply all migrations to the latest revision
-python -m alembic -c database/alembic.ini upgrade head
+python -m alembic -c app/db/alembic.ini upgrade head
 
 # Rollback one revision
-python -m alembic -c database/alembic.ini downgrade -1
+python -m alembic -c app/db/alembic.ini downgrade -1
 
 # Rollback completely to base
-python -m alembic -c database/alembic.ini downgrade base
+python -m alembic -c app/db/alembic.ini downgrade base
 
 # View migration history
-python -m alembic -c database/alembic.ini history
+python -m alembic -c app/db/alembic.ini history
 ```
 
 ---
 
 ## 4. Running the Smoke Test & Verification Suite
 
-The file `database/03_validation_and_smoke_test.sql` serves two roles:
+The file `app/db/03_validation_and_smoke_test.sql` serves two roles:
 1. **Part A (Curation Linter)**: Read-only data quality checks (flags active ingredients missing plain-language descriptions, orphan allergen links, or missing aliases).
 2. **Part B (Transactional Smoke Test)**: Executes functional assertions across the entire data lifecycle (matcher, triggers, multi-profiles, tenant isolation, scan safety evaluations) and **rolls back automatically** (`ROLLBACK`), leaving zero test garbage in the database.
 
 ### Running with psql:
 ```bash
-psql "$DATABASE_URL" -f database/03_validation_and_smoke_test.sql
+psql "$DATABASE_URL" -f app/db/03_validation_and_smoke_test.sql
+```
+Expected output on success:
+```text
+NOTICE:  FoodLence smoke test: ALL CHECKS PASSED
 ```
 Expected output on success:
 ```text
